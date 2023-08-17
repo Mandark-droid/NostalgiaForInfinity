@@ -1,6 +1,6 @@
 name: backtests
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       trading_mode:
