@@ -65,7 +65,7 @@ class NostalgiaForInfinityX4(IStrategy):
     INTERFACE_VERSION = 3
 
     def version(self) -> str:
-        return "v14.0.5"
+        return "v14.0.37"
 
     # ROI table:
     minimal_roi = {
@@ -2124,6 +2124,9 @@ class NostalgiaForInfinityX4(IStrategy):
         dataframe['tpct_change_0']   = top_percent_change(self, dataframe, 0)
         dataframe['tpct_change_2']   = top_percent_change(self, dataframe, 2)
 
+        # Candle change
+        dataframe['change_pct'] = (dataframe['close'] - dataframe['open']) / dataframe['open']
+
         # Close max
         dataframe['close_max_12'] = dataframe['close'].rolling(12).max()
         dataframe['close_max_24'] = dataframe['close'].rolling(24).max()
@@ -2879,6 +2882,320 @@ class NostalgiaForInfinityX4(IStrategy):
                 | (dataframe['rsi_3_15m'] > 20.0)
                 | (dataframe['ema_200_dec_48_1h'] == False)
                 | (dataframe['ema_200_dec_24_4h'] == False)
+            )
+            # current 1d green with top wick, 15m downtrend, 1h & 1d still high
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.04)
+                | (dataframe['top_wick_pct_1d'] < 0.04)
+                | (dataframe['not_downtrend_15m'])
+                | (dataframe['rsi_3_15m'] > 16.0)
+                | (dataframe['cti_20_1h'] < 0.7)
+                | (dataframe['cti_20_1d'] < 0.7)
+            )
+            # current 1h long red, 1h downtrend, 4h still high, 4h & 1d downtrend
+            &
+            (
+                (dataframe['change_pct_1h'] > -0.08)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['cti_20_4h'] < -0.5)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['ema_200_dec_24_4h'] == False)
+                | (dataframe['ema_200_dec_4_1d'] == False)
+            )
+            # 1d downtrend, 1h & 4h still low, 1d still high, drop in last 6 days
+            &
+            (
+                (dataframe['is_downtrend_3_1d'] == False)
+                | (dataframe['rsi_14_1h'] < 36.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['cti_20_1d'] < 0.5)
+                | (dataframe['rsi_14_1d'] < 50.0)
+                | (dataframe['high_max_6_1d'] < (dataframe['close'] * 1.5))
+            )
+            # 15m downtrend, 15m downmove, 1h & 4h & 1d still high
+            &
+            (
+                (dataframe['not_downtrend_15m'])
+                | (dataframe['rsi_3_15m'] > 16.0)
+                | (dataframe['rsi_14_1h'] < 50.0)
+                | (dataframe['rsi_14_4h'] < 50.0)
+                | (dataframe['cti_20_1d'] < 0.5)
+            )
+            # current 4h red, previous 4h long green, 1h & 4h overbought
+            &
+            (
+                (dataframe['change_pct_4h'] > -0.01)
+                | (dataframe['change_pct_4h'].shift(48) < 0.08)
+                | (dataframe['cti_20_1h'] < 0.5)
+                | (dataframe['cti_20_4h'] < 0.5)
+                | (dataframe['rsi_14_max_3_4h'] < 70.0)
+            )
+            # current 1d red, 1d & 4h downtrend, 15m & 1h & 4h downmove
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.08)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['not_downtrend_4h'])
+                | (dataframe['rsi_3_15m'] > 20.0)
+                | (dataframe['rsi_3_1h'] > 16.0)
+                | (dataframe['rsi_3_4h'] > 10.0)
+            )
+            # current 4h red with top wick, 1h downtrend, 15m & 1h downmove, 4h & 1d still high
+            &
+            (
+                (dataframe['change_pct_4h'] > -0.02)
+                | (dataframe['top_wick_pct_4h'] < 0.02)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3_15m'] > 6.0)
+                | (dataframe['rsi_3_1h'] > 26.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['rsi_14_1d'] < 50.0)
+            )
+            # current 1d green with top wick, 15m & 1h downtrend, 4h & 1d still high
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.08)
+                | (dataframe['top_wick_pct_1d'] < 0.08)
+                | (dataframe['not_downtrend_15m'])
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['cti_20_1d'] < 0.8)
+                | (dataframe['rsi_14_1d'] < 60.0)
+            )
+            # current 15m & 1h downtrend, 4h overbought
+            &
+            (
+                (dataframe['not_downtrend_15m'])
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['cti_20_4h'] < 0.7)
+                | (dataframe['rsi_14_4h'] < 70.0)
+            )
+            # current 1d red with top wick, previous 1d green with top wick, 1h & 4h & 1d still high, pump in last 6 days
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.04)
+                | (dataframe['top_wick_pct_1d'] < 0.04)
+                | (dataframe['change_pct_1d'].shift(288) < 0.04)
+                | (dataframe['top_wick_pct_1d'].shift(288) < 0.04)
+                | (dataframe['cti_20_1h'] < -0.0)
+                | (dataframe['cti_20_4h'] < -0.0)
+                | (dataframe['rsi_14_1d'] < 50.0)
+                | (dataframe['hl_pct_change_6_1d'] < 0.5)
+            )
+            # 15m downtrend, 5m & 15m downmove, 1h & 4h downtrend, drop in last 6 days
+            &
+            (
+                (dataframe['not_downtrend_15m'])
+                | (dataframe['rsi_3'] > 12.0)
+                | (dataframe['rsi_3_15m'] > 20.0)
+                | (dataframe['cti_20_1h'] < -0.0)
+                | (dataframe['ema_200_dec_48_1h'] == False)
+                | (dataframe['ema_200_dec_24_4h'] == False)
+                | (dataframe['high_max_6_1d'] < (dataframe['close'] * 1.5))
+            )
+            # 15m downtrend, 15m stil high, 1d overbought
+            &
+            (
+                (dataframe['not_downtrend_15m'])
+                | (dataframe['rsi_14_15m'] < 36.0)
+                | (dataframe['cti_20_1h'] < -0.0)
+                | (dataframe['cti_20_1d'] < 0.8)
+                | (dataframe['rsi_14_1d'] < 50.0)
+            )
+            # 15m downtrend, 15m stil high, 15m downmove, 1h & 4h overbought
+            &
+            (
+                (dataframe['not_downtrend_15m'])
+                | (dataframe['cti_20_15m'] < -0.5)
+                | (dataframe['rsi_3_15m'] > 6.0)
+                | (dataframe['cti_20_1h'] < 0.7)
+                | (dataframe['rsi_14_1h'] < 50.0)
+                | (dataframe['rsi_14_4h'] < 50.0)
+            )
+            # current 1d red, 1h downtrend, 15m downmove, 1h & 4h downtrend
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.12)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3_15m'] > 16.0)
+                | (dataframe['ema_200_dec_48_1h'] == False)
+                | (dataframe['ema_200_dec_24_4h'] == False)
+            )
+            # current 1d green with top wick, current 4h red, 1h downtrend, 4h & 1d overbought
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.08)
+                | (dataframe['top_wick_pct_1d'] < 0.08)
+                | (dataframe['change_pct_4h'] > -0.0)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_14_4h'] < 50.0)
+                | (dataframe['cti_20_1d'] < 0.8)
+                | (dataframe['rsi_14_1d'] < 50.0)
+            )
+            # current 1d green with top witck, current 4h red, 4h overbought
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.08)
+                | (dataframe['top_wick_pct_1d'] < 0.08)
+                | (dataframe['change_pct_4h'] > -0.01)
+                | (dataframe['rsi_14_max_3_4h'] < 70.0)
+                | (dataframe['ema_200_dec_24_4h'] == False)
+            )
+            # current 1d green with top wick, 15m downtrend, 15m downmove, 4h overbought
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.08)
+                | (dataframe['top_wick_pct_1d'] < 0.08)
+                | (dataframe['not_downtrend_15m'])
+                | (dataframe['rsi_3_15m'] > 16.0)
+                | (dataframe['cti_20_4h'] < 0.7)
+                | (dataframe['rsi_14_4h'] < 50.0)
+            )
+            # 1h & 4h downtrend, 15m downmove, 4h * 1d still high, 1h downtrend, drop in last 48 hours
+            &
+            (
+                (dataframe['not_downtrend_1h'])
+                | (dataframe['not_downtrend_4h'])
+                | (dataframe['rsi_3_15m'] > 20.0)
+                | (dataframe['cti_20_4h'] < -0.5)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['cti_20_1d'] < -0.5)
+                | (dataframe['rsi_14_1d'] < 40.0)
+                | (dataframe['ema_200_dec_48_1h'] == False)
+                | (dataframe['high_max_48_4h'] < (dataframe['close'] * 1.4))
+            )
+            # current 1d long green, current 4h red, 1h downtrend, 4h & 1d overbought
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.16)
+                | (dataframe['change_pct_4h'] > -0.04)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['cti_20_4h'] < 0.5)
+                | (dataframe['rsi_14_4h'] < 50.0)
+                | (dataframe['cti_20_1d'] < 0.5)
+                | (dataframe['rsi_14_1d'] < 70.0)
+            )
+            # current 1d green with top wick, current 4h green, 15m & 1h & 4h still high
+            &
+            (
+                (dataframe['change_pct_1d'] < 0.06)
+                | (dataframe['top_wick_pct_1d'] < 0.06)
+                | (dataframe['change_pct_4h'] < 0.04)
+                | (dataframe['rsi_14_15m'] < 30.0)
+                | (dataframe['cti_20_1h'] < -0.7)
+                | (dataframe['cti_20_4h'] < -0.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+            )
+            # current 1d red, 1h downtrend, 15m downmove, 1h & 1d still high
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.08)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3_15m'] > 20.0)
+                | (dataframe['cti_20_1h'] < 0.25)
+                | (dataframe['cti_20_1d'] < -0.5)
+                | (dataframe['rsi_14_1d'] < 40.0)
+            )
+            # 1h downtrend, 15m & 1h downmove, 4h & 1d still high, 4h & 1d downtrend
+            &
+            (
+                (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3_15m'] > 10.0)
+                | (dataframe['rsi_3_1h'] > 10.0)
+                | (dataframe['cti_20_4h'] < -0.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['cti_20_1d'] < -0.0)
+                | (dataframe['rsi_14_1d'] < 40.0)
+                | (dataframe['ema_200_dec_24_4h'] == False)
+                | (dataframe['ema_200_dec_4_1d'] == False)
+            )
+            # 1h & 4h downtrend, 5m & 15m & 1h & 4h downmove, 4h still high
+            &
+            (
+                (dataframe['not_downtrend_1h'])
+                | (dataframe['not_downtrend_4h'])
+                | (dataframe['rsi_3'] > 12.0)
+                | (dataframe['rsi_3_15m'] > 16.0)
+                | (dataframe['rsi_3_1h'] > 20.0)
+                | (dataframe['rsi_3_4h'] > 20.0)
+                | (dataframe['cti_20_4h'] < -0.5)
+                | (dataframe['rsi_14_4h'] < 30.0)
+            )
+            # 1h downtrend, 1h donwmove, 4h still high, 1d overbought
+            &
+            (
+                (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3_1h'] > 10.0)
+                | (dataframe['cti_20_4h'] < -0.0)
+                | (dataframe['rsi_14_4h'] < 50.0)
+                | (dataframe['cti_20_1d'] < 0.5)
+                | (dataframe['rsi_14_1d'] < 70.0)
+            )
+            # 1h downtrend, 1d still high, strong pump in last 6 days
+            &
+            (
+                (dataframe['not_downtrend_1h'])
+                | (dataframe['cti_20_1d'] < 0.5)
+                | (dataframe['hl_pct_change_6_1d'] < 3.0)
+            )
+            # current 5m red, 1h & 4h downtrend, 15m still high, 5m & 1h & 4h downmove, 1h downtrend
+            &
+            (
+                (dataframe['change_pct'] > -0.02)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['not_downtrend_4h'])
+                | (dataframe['rsi_14_15m'] < 30.0)
+                | (dataframe['rsi_3'] > 20.0)
+                | (dataframe['rsi_3_1h'] > 20.0)
+                | (dataframe['rsi_3_4h'] > 20.0)
+                | (dataframe['ema_200_dec_48_1h'] == False)
+            )
+            # 1d red, 1h downtrend, 15m & 1h & 4h still high
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.08)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_14_15m'] < 30.0)
+                | (dataframe['cti_20_1h'] < 0.5)
+                | (dataframe['rsi_14_1h'] < 40.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['rsi_14_1d'] < 40.0)
+            )
+            # current 1d red with top wick, previous 1d red, 14m downmove, 1h & 1d still high, pump in last 6 days
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.04)
+                | (dataframe['top_wick_pct_1d'] < 0.04)
+                | (dataframe['change_pct_1d'].shift(288) > -0.04)
+                | (dataframe['rsi_3_15m'] > 20.0)
+                | (dataframe['cti_20_1h'] < -0.7)
+                | (dataframe['cti_20_1d'] < 0.5)
+                | (dataframe['rsi_14_1d'] < 50.0)
+                | (dataframe['hl_pct_change_6_1d'] < 0.5)
+            )
+            # current 1d red, 1h & 4h downtrend, 5m downmove, 15m still high, 4h downmove
+            &
+            (
+                (dataframe['change_pct_1d'] > -0.04)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['not_downtrend_4h'])
+                | (dataframe['rsi_3'] > 20.0)
+                | (dataframe['cti_20_15m'] < -0.8)
+                | (dataframe['rsi_14_15m'] < 30.0)
+                | (dataframe['rsi_3_4h'] > 20.0)
+            )
+            # current 4h red, 1h downtrend, 4m downmove, 15m & 1h & 4h * 1d still high, drop in last 6 days
+            &
+            (
+                (dataframe['change_pct_4h'] > -0.02)
+                | (dataframe['not_downtrend_1h'])
+                | (dataframe['rsi_3'] > 10.0)
+                | (dataframe['rsi_14_15m'] < 30.0)
+                | (dataframe['rsi_14_1h'] < 30.0)
+                | (dataframe['rsi_14_4h'] < 40.0)
+                | (dataframe['rsi_14_1d'] < 40.0)
+                | (dataframe['high_max_6_1d'] < (dataframe['close'] * 1.5))
             )
         ]
 
@@ -6996,6 +7313,11 @@ class NostalgiaForInfinityX4(IStrategy):
                                           | (dataframe['rsi_14_15m'] < 46.0)
                                           | (dataframe['cti_20_1h'] < 0.5)
                                           | (dataframe['ema_200_dec_4_1d'] == False))
+                    item_buy_logic.append((dataframe['rsi_3'] > 10.0)
+                                          | (dataframe['rsi_14_15m'] < 46.0)
+                                          | (dataframe['cti_20_1h'] < -0.7)
+                                          | (dataframe['cti_20_4h'] < -0.7)
+                                          | (dataframe['rsi_14_1d'] < 60.0))
 
                     # Logic
                     item_buy_logic.append(dataframe['close'] < (dataframe['ema_16'] * 0.974))
@@ -9735,6 +10057,12 @@ class NostalgiaForInfinityX4(IStrategy):
                                           | (dataframe['cti_20_4h'] < 0.5)
                                           | (dataframe['ema_200_dec_24_4h'] == False)
                                           | (dataframe['high_max_24_4h'] < (dataframe['close'] * 1.3)))
+                    item_buy_logic.append((dataframe['cti_20_15m'] < -0.0)
+                                          | (dataframe['rsi_14_1h'] < 40.0)
+                                          | (dataframe['cti_20_4h'] < -0.5)
+                                          | (dataframe['rsi_14_4h'] < 40.0)
+                                          | (dataframe['ema_200_dec_24_4h'] == False)
+                                          | (dataframe['ema_200_dec_4_1d'] == False))
 
                     # Logic
                     item_buy_logic.append(dataframe['bb40_2_delta'].gt(dataframe['close'] * 0.036))
